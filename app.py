@@ -5,6 +5,7 @@ Video to Text Web Application
 """
 
 from flask import Flask, render_template, request, jsonify, send_file
+from flask_cors import CORS
 import os
 import tempfile
 from werkzeug.utils import secure_filename
@@ -13,6 +14,7 @@ import uuid
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['RESULTS_FOLDER'] = 'results'
@@ -37,12 +39,45 @@ def allowed_file(filename):
 def index():
     return render_template('index.html', languages=LANGUAGES)
 
+@app.route('/test', methods=['GET', 'POST'])
+def test_endpoint():
+    """Test endpoint to check if server is working"""
+    response = jsonify({
+        'status': 'OK',
+        'message': 'Server is working',
+        'method': request.method
+    })
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     print("=== Upload request received ===")
+    
+    # Add CORS headers manually
+    response_headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    }
+    
+    # Test imports first
+    try:
+        from video_to_text import video_to_text_converter
+        print("video_to_text import successful")
+    except Exception as e:
+        print(f"Error importing video_to_text: {e}")
+        response = jsonify({'error': f'Server configuration error: {e}'})
+        for key, value in response_headers.items():
+            response.headers[key] = value
+        return response, 500
+    
     try:
         if 'video' not in request.files:
-            return jsonify({'error': 'ไม่พบไฟล์วิดีโอ'}), 400
+            response = jsonify({'error': 'ไม่พบไฟล์วิดีโอ'})
+            for key, value in response_headers.items():
+                response.headers[key] = value
+            return response, 400
         
         file = request.files['video']
         language = request.form.get('language', 'th-TH')
@@ -59,10 +94,24 @@ def upload_file():
         video_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         
         # บันทึกไฟล์
-        file.save(video_path)
+        try:
+            print(f"Saving file to: {video_path}")
+            file.save(video_path)
+            print(f"File saved successfully, size: {os.path.getsize(video_path)} bytes")
+        except Exception as e:
+            print(f"Error saving file: {e}")
+            raise
         
         # แปลงเป็นข้อความ
-        result_text = video_to_text_converter(video_path, language=language)
+        try:
+            print(f"Starting conversion for file: {video_path}, language: {language}")
+            result_text = video_to_text_converter(video_path, language=language)
+            print(f"Conversion result: {result_text[:100]}..." if result_text and len(result_text) > 100 else f"Conversion result: {result_text}")
+        except Exception as e:
+            print(f"Error in video_to_text_converter: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
         
         # ลบไฟล์วิดีโอหลังจากแปลงเสร็จ
         try:
@@ -87,19 +136,28 @@ def upload_file():
                 f.write("-" * 50 + "\n\n")
                 f.write(result_text)
             
-            return jsonify({
+            response = jsonify({
                 'success': True,
                 'text': result_text,
                 'download_url': f'/download/{result_filename}'
             })
+            for key, value in response_headers.items():
+                response.headers[key] = value
+            return response
         else:
-            return jsonify({'error': result_text or 'ไม่สามารถแปลงไฟล์ได้'}), 500
+            response = jsonify({'error': result_text or 'ไม่สามารถแปลงไฟล์ได้'})
+            for key, value in response_headers.items():
+                response.headers[key] = value
+            return response, 500
             
     except Exception as e:
         print(f"=== ERROR: {str(e)} ===")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'เกิดข้อผิดพลาด: {str(e)}'}), 500
+        response = jsonify({'error': f'เกิดข้อผิดพลาด: {str(e)}'})
+        for key, value in response_headers.items():
+            response.headers[key] = value
+        return response, 500
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -113,4 +171,6 @@ def download_file(filename):
         return "ไฟล์ไม่พบ", 404
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print("Starting Flask server...")
+    print("Visit: http://localhost:5000")
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)

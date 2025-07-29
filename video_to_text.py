@@ -19,19 +19,19 @@ sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 def extract_audio_from_video(video_path, output_audio_path):
     """แยกเสียงจากไฟล์วิดีโอ"""
     # Import moviepy only when needed
-    from moviepy import VideoFileClip
+    from moviepy.editor import VideoFileClip
     
     video = None
     audio = None
     try:
         video = VideoFileClip(video_path)
         audio = video.audio
-        # แปลงเป็น WAV ด้วยพารามิเตอร์เฉพาะ
+        # แปลงเป็น WAV ด้วยคุณภาพที่ดีขึ้น
         audio.write_audiofile(
             output_audio_path, 
             logger=None,
             codec='pcm_s16le',  # WAV codec
-            ffmpeg_params=['-ac', '1', '-ar', '16000']  # mono, 16kHz
+            ffmpeg_params=['-ac', '1', '-ar', '22050']  # mono, 22kHz (ดีกว่า 16kHz)
         )
         return True
     except Exception as e:
@@ -48,38 +48,45 @@ def audio_to_text(audio_path, language='th-TH'):
     """แปลงไฟล์เสียงเป็นข้อความ"""
     recognizer = sr.Recognizer()
     
+    # ปรับตั้งค่าให้เหมาะสมกับเสียงพูด
+    recognizer.energy_threshold = 200  # ลดลงเพื่อจับเสียงเบาได้ดีขึ้น
+    recognizer.dynamic_energy_threshold = True
+    recognizer.pause_threshold = 0.8  # รอหยุดพัก 0.8 วินาที
+    recognizer.phrase_threshold = 0.3  # ระยะเวลาขั้นต่ำของวลี
+    recognizer.non_speaking_duration = 0.5  # ระยะเวลาที่ไม่พูด
+    
     try:
         with sr.AudioFile(audio_path) as source:
             print("กำลังอ่านไฟล์เสียง...")
-            # ปรับปรุงการอ่านเสียง
-            recognizer.adjust_for_ambient_noise(source, duration=0.5)
+            # ปรับปรุงการอ่านเสียงให้แม่นยำขึ้น
+            recognizer.adjust_for_ambient_noise(source, duration=1.0)
+            
+            # อ่านเสียงทั้งหมด
             audio_data = recognizer.record(source)
             
             print("กำลังแปลงเสียงเป็นข้อความ...")
-            # ลองใช้ Google Speech Recognition ก่อน
+            
+            # ลองใช้ Google Speech Recognition พร้อมตัวเลือกที่ดีขึ้น
             try:
-                # ใช้ภาษาที่กำหนด
-                text = recognizer.recognize_google(audio_data, language=language)
-                if text.strip():  # ตรวจสอบว่ามีข้อความจริง
+                text = recognizer.recognize_google(
+                    audio_data, 
+                    language=language,
+                    show_all=False
+                )
+                
+                if text.strip():
+                    print(f"ผลลัพธ์ ({language}): {text}")
                     return text
                 else:
                     # ถ้าไม่มีข้อความ ลองภาษาอังกฤษ
+                    print("ลองด้วยภาษาอังกฤษ...")
                     text = recognizer.recognize_google(audio_data, language='en-US')
                     return text if text.strip() else "ไม่พบเสียงพูดในไฟล์"
+                    
             except sr.RequestError as e:
-                # ถ้าไม่มีอินเทอร์เน็ต ลองใช้ Sphinx
-                try:
-                    text = recognizer.recognize_sphinx(audio_data)
-                    return f"[Offline] {text}" if text.strip() else "ไม่พบเสียงพูดในไฟล์"
-                except:
-                    return f"ไม่สามารถเชื่อมต่ออินเทอร์เน็ต และ offline recognition ล้มเหลว: {e}"
+                return f"ไม่สามารถเชื่อมต่อกับ Google Speech API: {e}"
             except sr.UnknownValueError:
-                # ลองใช้ Sphinx เป็นทางเลือกสุดท้าย
-                try:
-                    text = recognizer.recognize_sphinx(audio_data)
-                    return f"[Offline] {text}" if text.strip() else "ไม่พบเสียงพูดที่ชัดเจนในไฟล์"
-                except:
-                    return "ไม่สามารถแปลงเสียงเป็นข้อความได้ (ลองพูดให้ชัดเจนขึ้น)"
+                return "ไม่สามารถแปลงเสียงเป็นข้อความได้ (อาจจะเสียงไม่ชัดหรือไม่มีเสียงพูด)"
             
     except sr.UnknownValueError:
         return "ไม่สามารถแปลงเสียงเป็นข้อความได้ (ไม่พบเสียงพูดที่ชัดเจน)"

@@ -319,6 +319,8 @@
             result.style.display = 'none';
             
             try {
+                console.log('Starting upload...'); // Debug log
+                
                 // เพิ่ม timeout และ AbortController
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 นาที
@@ -326,11 +328,21 @@
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData,
-                    signal: controller.signal
+                    signal: controller.signal,
+                    headers: {
+                        // ไม่ต้องใส่ Content-Type ให้ browser จัดการเอง
+                    }
                 });
                 
                 clearTimeout(timeoutId);
+                console.log('Response received:', response.status); // Debug log
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Data:', data); // Debug log
                 
                 progress.style.display = 'none';
                 result.style.display = 'block';
@@ -349,14 +361,17 @@
                     downloadBtn.style.display = 'none';
                 }
             } catch (error) {
+                console.error('Upload error:', error); // Debug log
                 progress.style.display = 'none';
                 result.style.display = 'block';
                 result.classList.add('error');
                 
                 if (error.name === 'AbortError') {
                     resultText.textContent = 'การแปลงไฟล์ใช้เวลานานเกินไป (timeout) กรุณาลองใหม่หรือใช้ไฟล์ที่สั้นกว่า';
+                } else if (error.message.includes('Failed to fetch')) {
+                    resultText.textContent = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่าเซิร์ฟเวอร์ยังทำงานอยู่ (http://localhost:5000)';
                 } else {
-                    resultText.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์: ' + error.message;
+                    resultText.textContent = 'เกิดข้อผิดพลาด: ' + error.message + '\nกรุณาเปิด Developer Console (F12) เพื่อดูรายละเอียด';
                 }
                 downloadBtn.style.display = 'none';
             } finally {
