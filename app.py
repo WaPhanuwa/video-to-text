@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""
+Video to Text Web Application
+เว็บแอปสำหรับแปลงเสียงจากไฟล์วิดีโอเป็นข้อความ
+"""
+
+from flask import Flask, render_template, request, jsonify, send_file
+import os
+import tempfile
+from werkzeug.utils import secure_filename
+from video_to_text import video_to_text_converter
+import uuid
+from datetime import datetime
+
+app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['RESULTS_FOLDER'] = 'results'
+
+# สร้างโฟลเดอร์หากไม่มี
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['RESULTS_FOLDER'], exist_ok=True)
+
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'}
+LANGUAGES = {
+    'th-TH': 'ไทย',
+    'en-US': 'English',
+    'ja-JP': '日本語',
+    'ko-KR': '한국어',
+    'zh-CN': '中文'
+}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/')
+def index():
+    return render_template('index.html', languages=LANGUAGES)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    print("=== Upload request received ===")
+    try:
+        if 'video' not in request.files:
+            return jsonify({'error': 'ไม่พบไฟล์วิดีโอ'}), 400
+        
+        file = request.files['video']
+        language = request.form.get('language', 'th-TH')
+        
+        if file.filename == '':
+            return jsonify({'error': 'ไม่ได้เลือกไฟล์'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'รองรับเฉพาะไฟล์วิดีโอ: ' + ', '.join(ALLOWED_EXTENSIONS)}), 400
+        
+        # สร้างชื่อไฟล์ที่ไม่ซ้ำ
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        
+        # บันทึกไฟล์
+        file.save(video_path)
+        
+        # แปลงเป็นข้อความ
+        result_text = video_to_text_converter(video_path, language=language)
+        
+        # ลบไฟล์วิดีโอหลังจากแปลงเสร็จ
+        try:
+            import time
+            time.sleep(1)  # รอให้ไฟล์ปิดสมบูรณ์
+            if os.path.exists(video_path):
+                os.remove(video_path)
+        except Exception as e:
+            print(f"Warning: Could not delete video file: {e}")
+        
+        print(f"Debug - result_text: {result_text}")  # Debug line
+        
+        if result_text and not result_text.startswith('ไม่สามารถ') and not result_text.startswith('เกิดข้อผิดพลาด'):
+            # บันทึกผลลัพธ์
+            result_filename = f"result_{uuid.uuid4()}.txt"
+            result_path = os.path.join(app.config['RESULTS_FOLDER'], result_filename)
+            
+            with open(result_path, 'w', encoding='utf-8') as f:
+                f.write(f"ไฟล์: {filename}\n")
+                f.write(f"ภาษา: {LANGUAGES.get(language, language)}\n")
+                f.write(f"วันที่: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("-" * 50 + "\n\n")
+                f.write(result_text)
+            
+            return jsonify({
+                'success': True,
+                'text': result_text,
+                'download_url': f'/download/{result_filename}'
+            })
+        else:
+            return jsonify({'error': result_text or 'ไม่สามารถแปลงไฟล์ได้'}), 500
+            
+    except Exception as e:
+        print(f"=== ERROR: {str(e)} ===")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'เกิดข้อผิดพลาด: {str(e)}'}), 500
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    try:
+        return send_file(
+            os.path.join(app.config['RESULTS_FOLDER'], filename),
+            as_attachment=True,
+            download_name=f"transcription_{filename}"
+        )
+    except FileNotFoundError:
+        return "ไฟล์ไม่พบ", 404
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

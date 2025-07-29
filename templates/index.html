@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to Text Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .upload-icon {
+            font-size: 3em;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .upload-text {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .language-select {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            margin-bottom: 20px;
+            background: white;
+        }
+        
+        .progress {
+            display: none;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            animation: loading 2s ease-in-out infinite;
+        }
+        
+        @keyframes loading {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+        
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .result-text {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+        
+        .selected-file {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            color: #1976d2;
+        }
+        
+        .file-info {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥➡️📝</h1>
+            <h1>Video to Text</h1>
+            <p>แปลงเสียงจากไฟล์วิดีโอเป็นข้อความ</p>
+        </div>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">
+                    <strong>คลิกเพื่อเลือกไฟล์วิดีโอ</strong><br>
+                    หรือลากไฟล์มาวางที่นี่
+                </div>
+                <div class="upload-text" style="font-size: 0.9em; color: #999;">
+                    รองรับ: MP4, AVI, MOV, WMV, FLV, WEBM, MKV (สูงสุด 100MB)
+                </div>
+                <input type="file" id="videoFile" name="video" class="file-input" accept=".mp4,.avi,.mov,.wmv,.flv,.webm,.mkv">
+            </div>
+            
+            <div class="file-info" id="fileInfo"></div>
+            
+            <select name="language" class="language-select" id="languageSelect">
+                {% for code, name in languages.items() %}
+                <option value="{{ code }}" {% if code == 'th-TH' %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+            
+            <div style="text-align: center;">
+                <button type="submit" class="btn" id="convertBtn" disabled>
+                    🚀 เริ่มแปลงเป็นข้อความ
+                </button>
+            </div>
+        </form>
+        
+        <div class="progress" id="progress">
+            <div style="text-align: center; margin-bottom: 10px; color: #666;">
+                กำลังแปลงไฟล์... กรุณารอสักครู่
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+        
+        <div class="result" id="result">
+            <h3 style="margin-bottom: 15px; color: #333;">📄 ผลลัพธ์:</h3>
+            <div class="result-text" id="resultText"></div>
+            <button class="btn" id="downloadBtn" style="display: none;">
+                💾 ดาวน์โหลดไฟล์ข้อความ
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('videoFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const convertBtn = document.getElementById('convertBtn');
+        const progress = document.getElementById('progress');
+        const result = document.getElementById('result');
+        const resultText = document.getElementById('resultText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        
+        let selectedFile = null;
+        let downloadUrl = null;
+
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+        
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+        
+        function handleFileSelect(file) {
+            selectedFile = file;
+            
+            // Check file size (100MB limit)
+            if (file.size > 100 * 1024 * 1024) {
+                alert('ไฟล์ใหญ่เกิน 100MB กรุณาเลือกไฟล์ที่มีขนาดเล็กกว่า');
+                return;
+            }
+            
+            // Update UI
+            uploadArea.classList.add('selected-file');
+            uploadArea.innerHTML = `
+                <div class="upload-icon">✅</div>
+                <div class="upload-text">
+                    <strong>ไฟล์ที่เลือก: ${file.name}</strong><br>
+                    ขนาด: ${(file.size / 1024 / 1024).toFixed(2)} MB
+                </div>
+            `;
+            
+            fileInfo.style.display = 'block';
+            fileInfo.textContent = `พร้อมแปลงไฟล์: ${file.name}`;
+            convertBtn.disabled = false;
+        }
+        
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!selectedFile) {
+                alert('กรุณาเลือกไฟล์วิดีโอ');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('video', selectedFile);
+            formData.append('language', document.getElementById('languageSelect').value);
+            
+            // Show progress
+            convertBtn.disabled = true;
+            progress.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                // เพิ่ม timeout และ AbortController
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 นาที
+                
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                const data = await response.json();
+                
+                progress.style.display = 'none';
+                result.style.display = 'block';
+                
+                if (data.success) {
+                    result.classList.remove('error');
+                    resultText.textContent = data.text;
+                    
+                    if (data.download_url) {
+                        downloadUrl = data.download_url;
+                        downloadBtn.style.display = 'inline-block';
+                    }
+                } else {
+                    result.classList.add('error');
+                    resultText.textContent = data.error || 'เกิดข้อผิดพลาดในการแปลงไฟล์';
+                    downloadBtn.style.display = 'none';
+                }
+            } catch (error) {
+                progress.style.display = 'none';
+                result.style.display = 'block';
+                result.classList.add('error');
+                
+                if (error.name === 'AbortError') {
+                    resultText.textContent = 'การแปลงไฟล์ใช้เวลานานเกินไป (timeout) กรุณาลองใหม่หรือใช้ไฟล์ที่สั้นกว่า';
+                } else {
+                    resultText.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์: ' + error.message;
+                }
+                downloadBtn.style.display = 'none';
+            } finally {
+                convertBtn.disabled = false;
+            }
+        });
+        
+        downloadBtn.addEventListener('click', () => {
+            if (downloadUrl) {
+                window.location.href = downloadUrl;
+            }
+        });
+    </script>
+</body>
+</html>
