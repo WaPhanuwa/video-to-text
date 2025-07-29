@@ -7,7 +7,22 @@
 - การเชื่อมต่ออินเทอร์เน็ต (สำหรับ Google Speech Recognition)
 - Git (สำหรับ clone repository)
 
-## การติดตั้ง
+## 🔄 สำหรับคนที่โหลดไปแล้ว (อัพเดท)
+
+หากคุณโหลดโปรเจคไปก่อน **29 มกราคม 2025** และเจอปัญหาการติดตั้ง:
+
+```bash
+# ดึงการอัพเดทล่าสุด
+git pull origin main
+
+# ถอนการติดตั้งเก่า (ถ้ามี)
+pip uninstall PyAudio pocketsphinx -y
+
+# ติดตั้งใหม่
+pip install -r requirements.txt
+```
+
+## การติดตั้งใหม่
 
 ### ขั้นตอนที่ 1: ดาวน์โหลดโปรเจค
 ```bash
@@ -32,18 +47,14 @@ source venv/bin/activate
 
 #### 🪟 สำหรับ Windows
 ```bash
-# ติดตั้ง PyAudio (หากเกิดปัญหา)
-pip install pipwin
-pipwin install pyaudio
-
 # ติดตั้ง packages ทั้งหมด
 pip install -r requirements.txt
 ```
 
 #### 🍎 สำหรับ macOS
 ```bash
-# ติดตั้ง dependencies ที่จำเป็น
-brew install portaudio ffmpeg
+# ติดตั้ง dependencies ที่จำเป็น (สำหรับ moviepy)
+brew install ffmpeg
 
 # ติดตั้ง packages
 pip install -r requirements.txt
@@ -54,8 +65,8 @@ pip install -r requirements.txt
 # อัพเดท package list
 sudo apt update
 
-# ติดตั้ง dependencies ที่จำเป็น
-sudo apt install python3-dev python3-pip portaudio19-dev ffmpeg
+# ติดตั้ง dependencies ที่จำเป็น (สำหรับ moviepy)
+sudo apt install python3-dev python3-pip ffmpeg
 
 # ติดตั้ง packages
 pip install -r requirements.txt
