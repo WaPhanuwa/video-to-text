@@ -5,81 +5,108 @@
 
 - Python 3.7 หรือสูงกว่า
 - การเชื่อมต่ออินเทอร์เน็ต (สำหรับ Google Speech Recognition)
-- ไมโครโฟนและลำโพง (หากใช้งาน PyAudio)
+- Git (สำหรับ clone repository)
 
 ## การติดตั้ง
 
-### 1. Clone หรือ Download โปรเจค
+### ขั้นตอนที่ 1: ดาวน์โหลดโปรเจค
 ```bash
-git clone <repository-url>
+git clone https://github.com/WaPhanuwa/video-to-text.git
 cd video-to-text
 ```
 
-### 2. สร้าง Virtual Environment (แนะนำ)
+### ขั้นตอนที่ 2: สร้าง Virtual Environment (แนะนำ)
 ```bash
+# สร้าง virtual environment
 python -m venv venv
 
-# สำหรับ Windows
+# เปิดใช้งาน virtual environment
+# Windows:
 venv\Scripts\activate
 
-# สำหรับ macOS/Linux
+# macOS/Linux:
 source venv/bin/activate
 ```
 
-### 3. ติดตั้ง Dependencies
+### ขั้นตอนที่ 3: ติดตั้ง Dependencies ตาม OS
 
-#### สำหรับ Windows:
+#### 🪟 สำหรับ Windows
 ```bash
-# ติดตั้ง PyAudio ก่อน (ถ้าเกิดปัญหา)
+# ติดตั้ง PyAudio (หากเกิดปัญหา)
 pip install pipwin
 pipwin install pyaudio
 
-# ติดตั้ง dependencies ทั้งหมด
+# ติดตั้ง packages ทั้งหมด
 pip install -r requirements.txt
 ```
 
-#### สำหรับ macOS:
+#### 🍎 สำหรับ macOS
 ```bash
-# ติดตั้ง dependencies ที่จำเป็นก่อน
-brew install portaudio
+# ติดตั้ง dependencies ที่จำเป็น
+brew install portaudio ffmpeg
+
+# ติดตั้ง packages
 pip install -r requirements.txt
 ```
 
-#### สำหรับ Ubuntu/Debian:
+#### 🐧 สำหรับ Ubuntu/Debian
 ```bash
-# ติดตั้ง dependencies ที่จำเป็นก่อน
-sudo apt-get install python3-dev python3-pip libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0 ffmpeg
+# อัพเดท package list
+sudo apt update
+
+# ติดตั้ง dependencies ที่จำเป็น
+sudo apt install python3-dev python3-pip portaudio19-dev ffmpeg
+
+# ติดตั้ง packages
 pip install -r requirements.txt
 ```
 
-### 4. สร้าง Folders ที่จำเป็น
+### ขั้นตอนที่ 4: สร้างโฟลเดอร์ที่จำเป็น
 ```bash
 mkdir uploads results
 ```
 
-## การใช้งาน
+### ขั้นตอนที่ 5: ทดสอบการติดตั้ง
+```bash
+# ทดสอบ command line version
+python video_to_text.py --help
 
-### วิธีที่ 1: Web Interface (แนะนำ)
+# หรือทดสอบ web interface
+python app.py
+```
+
+## วิธีการใช้งาน
+
+### 🌐 Web Interface (แนะนำสำหรับผู้เริ่มต้น)
+1. เปิด terminal/command prompt
+2. รันคำสั่ง:
 ```bash
 python app.py
 ```
-จากนั้นเปิดเบราว์เซอร์ที่ `http://localhost:5000`
+3. เปิดเบราว์เซอร์ไปที่ `http://localhost:5000`
+4. อัพโหลดไฟล์วิดีโอและรอผลลัพธ์
 
-### วิธีที่ 2: Command Line
+### ⌨️ Command Line Interface
 
-#### แบบพื้นฐาน (แสดงผลบนหน้าจอ):
+#### การใช้งานพื้นฐาน:
 ```bash
-python video_to_text.py video.mp4
+# แสดงผลบนหน้าจอ
+python video_to_text.py your_video.mp4
+
+# บันทึกเป็นไฟล์ข้อความ
+python video_to_text.py your_video.mp4 output.txt
+
+# กำหนดภาษา
+python video_to_text.py your_video.mp4 output.txt th-TH
 ```
 
-#### บันทึกเป็นไฟล์ข้อความ:
+#### ตัวอย่างการใช้งาน:
 ```bash
-python video_to_text.py video.mp4 output.txt
-```
+# แปลงวิดีโอภาษาไทย
+python video_to_text.py presentation.mp4 transcript.txt th-TH
 
-#### กำหนดภาษา:
-```bash
-python video_to_text.py video.mp4 output.txt th-TH
+# แปลงวิดีโอภาษาอังกฤษ
+python video_to_text.py lecture.mp4 notes.txt en-US
 ```
 
 ## ภาษาที่รองรับ
@@ -90,39 +117,67 @@ python video_to_text.py video.mp4 output.txt th-TH
 ## ไฟล์วิดีโอที่รองรับ
 - MP4, AVI, MOV, MKV และรูปแบบอื่นๆ ที่ moviepy รองรับ
 
-## การแก้ไขปัญหาที่พบบ่อย
+## 🔧 การแก้ไขปัญหาที่พบบ่อย
 
-### PyAudio ติดตั้งไม่ได้
+### ❌ PyAudio ติดตั้งไม่ได้
+
+**Windows:**
 ```bash
-# สำหรับ Windows
 pip install pipwin
 pipwin install pyaudio
+```
 
-# สำหรับ macOS
+**macOS:**
+```bash
 brew install portaudio
 export LDFLAGS="-L/opt/homebrew/lib"
 export CPPFLAGS="-I/opt/homebrew/include"
 pip install pyaudio
-
-# สำหรับ Ubuntu/Debian
-sudo apt-get install portaudio19-dev python3-pyaudio
 ```
 
-### MoviePy ใช้งานไม่ได้
+**Ubuntu/Debian:**
 ```bash
-# ติดตั้ง ffmpeg
-# Windows: ดาวน์โหลดจาก https://ffmpeg.org/download.html
-# macOS:
+sudo apt install portaudio19-dev python3-pyaudio
+pip install pyaudio
+```
+
+### ❌ MoviePy หรือ FFmpeg ใช้งานไม่ได้
+
+**Windows:**
+1. ดาวน์โหลด FFmpeg จาก https://ffmpeg.org/download.html
+2. แตกไฟล์และเพิ่ม path ใน System Environment Variables
+
+**macOS:**
+```bash
 brew install ffmpeg
-# Ubuntu/Debian:
-sudo apt-get install ffmpeg
 ```
 
-### ปัญหา Permission บน macOS
+**Ubuntu/Debian:**
 ```bash
-# อนุญาตให้ Terminal เข้าถึงไมโครโฟน
-# System Preferences > Security & Privacy > Privacy > Microphone
+sudo apt install ffmpeg
 ```
+
+### ❌ Virtual Environment ใช้งานไม่ได้
+
+```bash
+# ลองใช้ python3 แทน python
+python3 -m venv venv
+
+# หรือติดตั้ง virtualenv
+pip install virtualenv
+virtualenv venv
+```
+
+### ❌ Permission Error บน macOS
+
+1. ไป System Preferences → Security & Privacy → Privacy → Microphone
+2. อนุญาตให้ Terminal เข้าถึงไมโครโฟน
+
+### ❌ Internet Connection Error
+
+- ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต
+- Google Speech Recognition ต้องการอินเทอร์เน็ต
+- ลองรันทดสอบ: `python -c "import speech_recognition as sr; print('OK')"`
 
 ## หมายเหตุ
 - ต้องการการเชื่อมต่ออินเทอร์เน็ตเพื่อใช้ Google Speech Recognition
