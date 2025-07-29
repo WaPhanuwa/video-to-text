@@ -190,6 +190,44 @@ virtualenv venv
 - Google Speech Recognition ต้องการอินเทอร์เน็ต
 - ลองรันทดสอบ: `python -c "import speech_recognition as sr; print('OK')"`
 
+### ❌ Web App แสดง HTTP 500 Error
+
+**ตรวจสอบ server logs:**
+```bash
+# รัน server และดู error message
+python app.py
+
+# ทดสอบ server
+curl http://localhost:5000/test
+```
+
+**สาเหตุที่พบบ่อย:**
+- moviepy import ผิด → แก้ไข: `from moviepy.editor import VideoFileClip`
+- ไฟล์วิดีโอเสียหายหรือรูปแบบไม่รองรับ → ใช้ MP4
+- หน่วยความจำไม่พอ → ใช้ไฟล์เล็กลง (<50MB)
+
+### ❌ ผลลัพธ์การแปลงไม่แม่นยำ  
+
+**วิธีปรับปรุงความแม่นยำ:**
+- ใช้ไฟล์เสียงที่ชัดเจน ไม่มีเสียงรบกวน
+- พูดช้าๆ ชัดเจน 
+- เลือกภาษาที่ถูกต้อง (th-TH สำหรับไทย)
+- ใช้ไฟล์ MP4 ที่มีคุณภาพดี
+
+### ❌ "Failed to fetch" Error
+
+**วิธีแก้ไข:**
+```bash
+# ตรวจสอบว่า server ทำงาน
+python app.py
+
+# เปิดเบราว์เซอร์ใหม่ไปที่
+http://localhost:5000
+
+# หรือลองใช้ IP address
+http://127.0.0.1:5000
+```
+
 ## หมายเหตุ
 - ต้องการการเชื่อมต่ออินเทอร์เน็ตเพื่อใช้ Google Speech Recognition
 - คุณภาพของเสียงจะส่งผลต่อความแม่นยำของการแปลง
